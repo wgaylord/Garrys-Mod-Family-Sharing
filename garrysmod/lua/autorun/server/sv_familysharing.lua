@@ -12,9 +12,6 @@ Depending on the settings you assign you may also ban users by IP too what will 
 ]]
 
 local SteamFamilySharing = {}
---SteamFamilySharing.APIKey required to deal with those family sharing.
---You may obtain your Steam API Key from here | http://steamcommunity.com/dev/apikey
-SteamFamilySharing.APIKey = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 --The message displayed to those who connect by a family shared account that has been banned.
 SteamFamilySharing.kickmessage = "The account that lent you Garry's Mod is banned on this server"
@@ -130,35 +127,9 @@ end
 --Function to check players who connect if they are on a family shared account or not.
 --If they are family sharing they will be passed to the "HandleSharedPlayer" function to decide their fate.
 local function CheckFamilySharing(ply)
-	--Send request to the SteamDEV API with the SteamID64 of the player who has just connected.
-	http.Fetch(
-	string.format("http://api.steampowered.com/IPlayerService/IsPlayingSharedGame/v0001/?key=%s&format=json&steamid=%s&appid_playing=4000",
-		SteamFamilySharing.APIKey,
-		ply:SteamID64()
-	),
-
-	function(body)
-		--Put the http response into a table.
-		local body = util.JSONToTable(body)
-
-		--If the response does not contain the following table items.
-		if not body or not body.response or not body.response.lender_steamid then
-			error(string.format("FamilySharing: Invalid Steam API response for %s | %s\n", ply:Nick(), ply:SteamID()))
-		end
-
-		--Set the lender to be the lender in our body response table.
-		local lender = body.response.lender_steamid
-		--If the lender is not 0 (Would contain SteamID64). Lender will only ever == 0 if the account owns the game.
-		if lender ~= "0" then
-			--Handle the player that is on a family shared account to decide their fate.
-			HandleSharedPlayer(ply, util.SteamIDFrom64(lender))
-		end
-	end,
-
-	function(code)
-		error(string.format("FamilySharing: Failed API call for %s | %s (Error: %s)\n", ply:Nick(), ply:SteamID(), code))
+	if ply:OwnerSteamID64() != ply:SteamID64() and ply:IsFullyAuthenticated() then
+			HandleSharedPlayer(ply, util.SteamIDFrom64(ply:OwnerSteamID64() ))
 	end
-	)
 end
 hook.Add("PlayerAuthed", "CheckFamilySharing", CheckFamilySharing)
 
